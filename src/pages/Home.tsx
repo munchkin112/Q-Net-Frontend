@@ -1,0 +1,12 @@
+import React from 'react';
+import assets from '../assets.json';
+import { certificates } from '../api/certificates';
+import { exams, initialCalendar } from '../api/calendar';
+import { profileFields } from '../api/profile';
+import { useAppContext } from '../AppContext';
+import { Button } from '../components/Button';
+import { Icon, OutlineIcon } from '../components/Icons';
+import { FavoriteCard } from '../components/FavoriteCard';
+import { CalendarRows, SmallTitle } from '../components/PageHelpers';
+
+export default function Home(){const {page,logged,setLogged,selected,setSelected,favorites,setFavorites,calendar,setCalendar,search,setSearch,submitted,setSubmitted,category,setCategory,more,setMore,returnPage,setReturnPage,profile,setProfile,calendarKey,setCalendarKey,examType,setExamType,round,setRound,toast,setToast,dialog,setDialog,favoriteSearch,setFavoriteSearch,sort,setSort,go,protectedGo,openDetail,toggleFavorite,openCalendar,calendarId,cert,registered,register}=useAppContext();const query=submitted.trim();const match=!query||certificates[0].name.includes(query);return <><section className="hero"><img className="hero-bg" src={assets.main.imgBg} alt=""/><h1>내 다음 자격을 찾아보세요.</h1><p>관심 있는 자격증을 검색하거나, 내 조건에 맞는 후보를 찾아보세요.</p><div className="hero-controls"><form className="search" onSubmit={e=>{e.preventDefault();setSubmitted(search)}}><input aria-label="찾으시는 자격증" placeholder="찾으시는 자격증을 검색하세요" value={search} onChange={e=>setSearch(e.target.value)}/><Button className="primary" type="submit">검색</Button></form><Button onClick={()=>protectedGo('profile')}>내 조건으로 찾기</Button></div><small>목록은 로그인 없이 둘러볼 수 있어요. 자세한 정보와 맞춤 추천은 로그인 후 이어집니다.</small></section><section className="catalog"><div className="catalog-title"><h2>자격증 목록</h2><span>기술자격 513종목</span></div><div className="filters" role="group" aria-label="자격증 등급">{['전체','기사','산업기사','기능사'].map(c=><button key={c} aria-pressed={category===c} className={category===c?'active':''} onClick={()=>setCategory(c)}>{c}</button>)}</div><div className="catalog-grid">{match&&['전체','기사'].includes(category)?Array.from({length:more?12:6},(_,i)=><button className="catalog-card" key={i} onClick={()=>openDetail(certificates[0].name)}><img src={assets.main.imgVector11} className="card-bg" alt=""/><span className="badge">국가기술자격</span><h3>프레스금형기사</h3><span className="link">상세정보 더 보기 →</span></button>):<p className="empty">검색 조건에 맞는 데모 자격증이 없습니다.</p>}</div><Button className="more-button" onClick={()=>setMore(!more)}>{more?'접기':'더 보기'}</Button></section></>}
