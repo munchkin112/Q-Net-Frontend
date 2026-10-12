@@ -1,6 +1,7 @@
 export type Profile = {
   field: number;
   education: string;
+  educationStatus: string;
   major: string;
   experience: boolean;
   years: string;
@@ -36,7 +37,43 @@ export const profileFields = [
 export const initialProfile: Profile = {
   field: 14,
   education: '',
+  educationStatus: '',
   major: '',
   experience: true,
   years: '',
 };
+
+export const educationOptions = [
+  { value: 'high_school_or_below', label: '고졸 이하' },
+  { value: 'college', label: '전문대' },
+  { value: 'university', label: '대학교' },
+  { value: 'graduate_school', label: '대학원' },
+  { value: 'other', label: '기타' },
+];
+
+export const educationStatusOptions = [
+  { value: 'graduated', label: '졸업' },
+  { value: 'enrolled', label: '재학' },
+  { value: 'expected', label: '졸업 예정' },
+  { value: 'other', label: '기타' },
+];
+
+export function getProfilePayload(profile: Profile) {
+  if (!Number.isInteger(profile.field) || profile.field < 0 || profile.field >= profileFields.length ||
+      !educationOptions.some(option => option.value === profile.education) ||
+      !educationStatusOptions.some(option => option.value === profile.educationStatus)) {
+    throw new Error('관심 분야·학력·졸업 상태를 선택해주세요.');
+  }
+  if (profile.experience && (!profile.years.trim() || !Number.isFinite(Number(profile.years)) ||
+      Number(profile.years) < 0 || Number(profile.years) > 80)) {
+    throw new Error('관련 직무 년차를 0~80 사이 숫자로 입력해주세요.');
+  }
+  return {
+    interest_category_codes: [String(profile.field + 1).padStart(2, '0')],
+    education_level: profile.education,
+    education_status: profile.educationStatus,
+    major: profile.major.trim() || null,
+    has_career: profile.experience,
+    career_years: profile.experience ? Number(profile.years) : null,
+  };
+}

@@ -2,7 +2,7 @@ import React from 'react';
 import assets from '../assets.json';
 import { certificates } from '../api/certificates';
 import { exams, initialCalendar } from '../api/calendar';
-import { profileFields } from '../api/profile';
+import { profileFields, educationOptions, educationStatusOptions } from '../api/profile';
 import { useAppContext } from '../AppContext';
 import { Button } from '../components/Button';
 import { Icon, OutlineIcon } from '../components/Icons';
@@ -28,11 +28,13 @@ export default function Profile() {
       <form
         onSubmit={e => {
           e.preventDefault();
-          if (!profile.education.trim()) {
+          if (!educationOptions.some(option => option.value === profile.education) ||
+              !educationStatusOptions.some(option => option.value === profile.educationStatus)) {
             setToast('최종 학력·졸업 상태를 입력해 주세요.');
             return;
           }
-          if (profile.experience && !profile.years) {
+          if (profile.experience && (!profile.years || !Number.isFinite(Number(profile.years)) ||
+              Number(profile.years) < 0 || Number(profile.years) > 80)) {
             setToast('관련 직무 년차를 입력해 주세요.');
             return;
           }
@@ -59,13 +61,23 @@ export default function Profile() {
         </div>
         <div className="profile-grid">
           <label>
-            최종 학력·졸업 상태 *
-            <input
+            최종 학력 *
+            <select
               required
-              value={profile.education}
+              value={educationOptions.some(option => option.value === profile.education) ? profile.education : ''}
               onChange={e => setProfile({ ...profile, education: e.target.value })}
-              placeholder="고졸 / 전문대 / 대학 / 기타 · 졸업 / 재학 등"
-            />
+            >
+              <option value="" disabled>최종 학력을 선택해주세요</option>
+              {educationOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+          </label>
+          <label>
+            졸업 상태 *
+            <select required value={profile.educationStatus || ''}
+              onChange={e => setProfile({ ...profile, educationStatus: e.target.value })}>
+              <option value="" disabled>졸업 상태를 선택해주세요</option>
+              {educationStatusOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
           </label>
           <label>
             전공 · 선택
@@ -84,7 +96,7 @@ export default function Profile() {
                   type="button"
                   aria-pressed={profile.experience === v}
                   className={profile.experience === v ? 'chosen' : ''}
-                  onClick={() => setProfile({ ...profile, experience: v })}
+                  onClick={() => setProfile({ ...profile, experience: v, years: v ? profile.years : '' })}
                 >
                   {v ? '있어요' : '없어요'}
                 </button>
@@ -99,6 +111,8 @@ export default function Profile() {
                 type="number"
                 min="0"
                 max="80"
+                step="0.1"
+                required={profile.experience}
                 placeholder="ex) 3"
                 disabled={!profile.experience}
                 value={profile.years}
