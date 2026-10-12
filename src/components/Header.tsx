@@ -2,16 +2,11 @@ import { Button } from './Button';
 import { useAppContext } from '../AppContext';
 
 export function Header() {
-  const { page, logged, go, goHome, protectedGo, setReturnPage } = useAppContext();
+  const { page, go, goHome, protectedGo } = useAppContext();
   const showAccountButton = !['profile', 'related'].includes(page);
 
   const openAccount = () => {
-    if (logged) {
-      go('mypage');
-      return;
-    }
-    setReturnPage('mypage');
-    go('login');
+    go('mypage');
   };
 
   return (
@@ -26,10 +21,10 @@ export function Header() {
       </nav>
       {showAccountButton && (
         <Button
-          className={logged ? 'account' : 'login-button'}
+          className="account"
           onClick={openAccount}
         >
-          {logged ? '마이페이지' : 'Google 로그인'}
+          마이페이지
         </Button>
       )}
     </header>

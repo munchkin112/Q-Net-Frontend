@@ -7,6 +7,32 @@ export type Profile = {
   years: string;
 };
 
+export type InterestCategory = {
+  code: string;
+  name: string;
+};
+
+export async function getInterestCategories(signal?: AbortSignal): Promise<InterestCategory[]> {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+  if (!baseUrl) throw new Error('VITE_API_BASE_URL 환경변수를 설정해주세요.');
+
+  const response = await fetch(`${baseUrl.replace(/\/+$/, '')}/interest-categories`, {
+    headers: { Accept: 'application/json' },
+    signal,
+  });
+  if (!response.ok) throw new Error(`관심 분야를 불러오지 못했습니다. (${response.status})`);
+
+  const data: unknown = await response.json();
+  if (!Array.isArray(data) || data.length === 0 || !data.every(item =>
+    item && typeof item === 'object' &&
+    typeof item.code === 'string' && /^(0[1-9]|1[0-9]|2[0-4])$/.test(item.code) &&
+    typeof item.name === 'string' && item.name.trim().length > 0
+  ) || new Set(data.map(item => item.code)).size !== data.length) {
+    throw new Error('관심 분야 응답 형식이 올바르지 않습니다.');
+  }
+  return (data as InterestCategory[]).sort((a, b) => a.code.localeCompare(b.code));
+}
+
 export const profileFields = [
   '사업관리',
   '경영·회계·사무',
@@ -72,7 +98,7 @@ export function getProfilePayload(profile: Profile) {
     interest_category_codes: [String(profile.field + 1).padStart(2, '0')],
     education_level: profile.education,
     education_status: profile.educationStatus,
-    major: profile.major.trim() || null,
+    major: profile.major.trim() || '해당 없음',
     has_career: profile.experience,
     career_years: profile.experience ? Number(profile.years) : null,
   };

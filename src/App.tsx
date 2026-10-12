@@ -3,21 +3,21 @@ import { AppContextProvider } from './AppContext';
 import {
   AuthApiError,
   clearAccessToken,
-  completeGoogleLogin,
   getAccessToken,
   refreshAccessToken,
   saveAccessToken,
 } from './api/auth';
 import {
   calendarId,
-  downloadCalendar,
-  exams,
-  initialCalendar,
+  createGoogleCalendarEntry,
+  formatRoundLabel,
+  formatScheduleDate,
 } from './api/calendar';
 import type { CalendarEntry } from './api/calendar';
-import { certificates, type Page } from './api/certificates';
-import { toggleFavorite as updateFavorites } from './api/favorites';
+import { certificates, type CertificateSchedule, type Page } from './api/certificates';
+import { toggleFavorite as updateFavorites, type FavoriteCertificate, type FavoriteInput } from './api/favorites';
 import { initialProfile } from './api/profile';
+import type { RecommendationsResponse } from './api/recommendations';
 import { useStored } from './api/storage';
 import Calendar from './pages/Calendar';
 import Detail from './pages/Detail';
@@ -29,6 +29,8 @@ import Profile from './pages/Profile';
 import Recommendations from './pages/Recommendations';
 import Related from './pages/Related';
 import { Header } from './components/Header';
+import CalendarRegistrationDialog, { CALENDAR_OAUTH_PENDING, CALENDAR_CONNECTED_UNTIL } from './components/CalendarRegistrationDialog';
+import { completeCalendarAuthorization, type CalendarRegistrationResult } from './api/googleCalendar';
 import './styles/common.css';
 import './styles/home.css';
 import './styles/login.css';
@@ -58,6 +60,7 @@ function route(): Page {
     location.pathname.split('/').pop()?.replace(/\.html$/, '') ||
     document.documentElement.dataset.page ||
     'home';
+  if (path === 'login') return 'home';
   return pages.includes(path as Page) ? (path as Page) : 'home';
 }
 
@@ -65,8 +68,8 @@ export default function App() {
   const [page, setPage] = useState<Page>(route);
   const [logged, setLogged] = useState(() => Boolean(getAccessToken()));
   const [selected, setSelected] = useStored('selected', certificates[0].name);
-  const [favorites, setFavorites] = useStored('favorites', certificates.map(({ name }) => name));
-  const [calendar, setCalendar] = useStored('calendar', initialCalendar);
+  const [favorites, setFavorites] = useStored<FavoriteCertificate[]>('favorite-certificates', []);
+  const [calendar, setCalendar] = useStored<CalendarEntry[]>('google-calendar-registrations', []);
   const [search, setSearch] = useStored('search', '');
   const [submitted, setSubmitted] = useState(search);
   const [category, setCategory] = useState('전체');
@@ -74,9 +77,11 @@ export default function App() {
   const [homeResetKey, setHomeResetKey] = useState(0);
   const [returnPage, setReturnPage] = useStored<Page>('return-page', 'detail');
   const [profile, setProfile] = useStored('profile', initialProfile);
+  const [recommendationResult, setRecommendationResult] = useStored<RecommendationsResponse | null>('recommendations', null);
   const [calendarKey, setCalendarKey] = useState('');
   const [examType, setExamType] = useState('필기');
   const [round, setRound] = useState(2);
+  const [activeSchedule, setActiveSchedule] = useState<CertificateSchedule | null>(null);
   const [toast, setToast] = useState('');
   const [dialog, setDialog] = useState(false);
   const [favoriteSearch, setFavoriteSearch] = useState('');
@@ -84,9 +89,25 @@ export default function App() {
 
   useEffect(() => {
     const onNavigate = () => {
+      if (
+        route() === 'home' &&
+        (location.pathname.endsWith('/login.html') || location.hash === '#login')
+      ) {
+        if (location.protocol === 'file:') {
+          location.hash = 'home';
+        } else {
+          history.replaceState(
+            {},
+            '',
+            `${location.pathname.replace(/login\.html$/, 'home.html')}${location.search}`,
+          );
+        }
+        document.title = '자격잇다 · 내 다음 자격';
+      }
       setPage(route());
       window.scrollTo(0, 0);
     };
+    onNavigate();
     addEventListener('hashchange', onNavigate);
     addEventListener('popstate', onNavigate);
     return () => {
@@ -102,29 +123,44 @@ export default function App() {
     const oauthError = query.get('error');
     let cancelled = false;
 
-    if (code || state || oauthError) {
+    const isCalendarCallback = location.pathname.endsWith('/calendar-callback.html') ||
+      location.pathname.endsWith('/callback.html') || Boolean(sessionStorage.getItem(CALENDAR_OAUTH_PENDING));
+    if (isCalendarCallback && (code || state || oauthError)) {
       history.replaceState({}, '', `${location.pathname}${location.hash}`);
       if (oauthError || !code || !state) {
-        setToast('Google 로그인에 실패했습니다. 다시 시도해주세요.');
-        if (page !== 'login') go('login');
+        sessionStorage.removeItem(CALENDAR_OAUTH_PENDING);
+        setToast('Google Calendar 권한 동의를 완료하지 못했습니다. 다시 연결해주세요.');
+        go('mypage');
         return;
       }
-
-      void completeGoogleLogin(code, state)
-        .then(({ access_token: accessToken }) => {
+      void completeCalendarAuthorization(code, state)
+        .then(({ expires_in }) => {
           if (cancelled) return;
-          saveAccessToken(accessToken);
-          setLogged(true);
-          setToast('Google 로그인에 성공했습니다.');
-          go(returnPage);
+          sessionStorage.setItem(CALENDAR_CONNECTED_UNTIL, String(Date.now() + expires_in * 1000));
+          const saved = sessionStorage.getItem(CALENDAR_OAUTH_PENDING);
+          sessionStorage.removeItem(CALENDAR_OAUTH_PENDING);
+          go('mypage');
+          if (saved) {
+            const pending = JSON.parse(saved) as { name: string; schedule: CertificateSchedule };
+            setSelected(pending.name);
+            setActiveSchedule(pending.schedule);
+            setExamType(pending.schedule.phase === 'written' ? '필기' : pending.schedule.phase === 'practical' ? '실기' : '면접');
+            setDialog(true);
+          }
+          setToast('Google Calendar가 연결되었습니다. 등록할 항목을 확인해주세요.');
         })
         .catch((cause: unknown) => {
           if (cancelled) return;
-          clearAccessToken();
-          setLogged(false);
-          setToast(cause instanceof Error ? cause.message : 'Google 로그인에 실패했습니다.');
-          if (page !== 'login') go('login');
+          sessionStorage.removeItem(CALENDAR_OAUTH_PENDING);
+          setToast(cause instanceof Error ? cause.message : 'Google Calendar 연결에 실패했습니다.');
+          go('mypage');
         });
+      return () => { cancelled = true; };
+    }
+    if (code || state || oauthError) {
+      history.replaceState({}, '', `${location.pathname}${location.hash}`);
+      setToast('Google Calendar 연결 버튼에서 다시 시작해주세요.');
+      go('mypage');
     } else {
       void refreshAccessToken()
         .then((accessToken) => {
@@ -157,11 +193,12 @@ export default function App() {
   }, [toast]);
 
   const go = (to: Page) => {
+    const destination = to === 'login' ? 'home' : to;
     if (location.protocol === 'file:') {
-      location.hash = to;
+      location.hash = destination;
     } else {
-      history.pushState({}, '', `${to}.html`);
-      setPage(to);
+      history.pushState({}, '', `${destination}.html`);
+      setPage(destination);
       window.scrollTo(0, 0);
     }
   };
@@ -174,11 +211,7 @@ export default function App() {
     go('home');
   };
   const protectedGo = (to: Page) => {
-    if (logged) go(to);
-    else {
-      setReturnPage(to);
-      go('login');
-    }
+    go(to);
   };
   const openDetail = (name: string) => {
     setSelected(name);
@@ -189,27 +222,18 @@ export default function App() {
     setCalendarKey(id);
     go('calendar');
   };
-  const toggleFavorite = (name: string) =>
-    setFavorites((previous) => updateFavorites(previous, name));
+  const toggleFavorite = (name: string, certificate?: FavoriteInput) =>
+    setFavorites((previous) => updateFavorites(previous, name, certificate));
   const cert = certificates.find(({ name }) => name === selected) || certificates[0];
-  const registered = calendar.some(
-    (entry) =>
-      entry.name === selected && entry.type === examType && entry.round === round + 1,
-  );
-  const register = () => {
-    if (!registered) {
-      const exam = exams[round];
-      const entry: CalendarEntry = {
-        name: selected,
-        type: examType,
-        apply: `2026.${exam.apply.replaceAll('월', '').replaceAll('화', '')}`,
-        exam: `2026.${exam.exam}`,
-        round: round + 1,
-      };
-      setCalendar((previous) => [...previous, entry]);
-    }
-    setDialog(false);
-    setToast('선택한 일정을 데모 캘린더에 저장했습니다.');
+  const registered = activeSchedule
+    ? calendar.some((entry) => entry.scheduleId === activeSchedule.id)
+    : false;
+  const register = () => setDialog(true);
+  const saveGoogleRegistration = (result: CalendarRegistrationResult) => {
+    if (!activeSchedule) return;
+    const entry = createGoogleCalendarEntry(selected, activeSchedule, result);
+    if (!entry) return;
+    setCalendar(previous => [entry, ...previous.filter(item => item.scheduleId !== entry.scheduleId)]);
   };
   const small = ['mypage', 'favorites', 'calendar'].includes(page);
   const detail = page === 'detail';
@@ -240,12 +264,16 @@ export default function App() {
         setReturnPage,
         profile,
         setProfile,
+        recommendationResult,
+        setRecommendationResult,
         calendarKey,
         setCalendarKey,
         examType,
         setExamType,
         round,
         setRound,
+        activeSchedule,
+        setActiveSchedule,
         toast,
         setToast,
         dialog,
@@ -282,39 +310,14 @@ export default function App() {
             {toast}
           </div>
         )}
-        {dialog && (
-          <div className="modal-backdrop" onClick={() => setDialog(false)}>
-            <section
-              className="modal"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="calendar-dialog-title"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <h2 id="calendar-dialog-title">캘린더 일정 추가</h2>
-              <p>
-                {selected} · 정기 기사 {round + 1}회 · {examType}
-              </p>
-              <p>
-                현재는 데모입니다. 이 브라우저에 일정을 저장하거나, 파일을 내려받아 Google
-                Calendar에 직접 가져올 수 있습니다.
-              </p>
-              <div>
-                <button className="button" onClick={() => setDialog(false)}>
-                  취소
-                </button>
-                <button
-                  className="button"
-                  onClick={() => downloadCalendar(selected, examType, round)}
-                >
-                  일정 파일 다운로드
-                </button>
-                <button className="button primary" onClick={register}>
-                  {registered ? '저장 완료' : '데모 캘린더에 저장'}
-                </button>
-              </div>
-            </section>
-          </div>
+        {dialog && activeSchedule && (
+          <CalendarRegistrationDialog
+            key={activeSchedule.id}
+            name={selected}
+            schedule={activeSchedule}
+            onClose={() => setDialog(false)}
+            onSaved={saveGoogleRegistration}
+          />
         )}
       </div>
     </AppContextProvider>

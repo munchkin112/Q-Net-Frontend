@@ -38,3 +38,17 @@
   .calendar-detail-line{grid-template-columns:24px minmax(0,1fr)}
   .calendar-detail-line>span{grid-column:2}
 }
+.calendar-event-options{display:flex;flex-wrap:wrap;gap:12px 20px;margin-top:20px;padding:16px;border:1px solid var(--jg-border);border-radius:10px}
+.calendar-event-options legend{font-weight:700;padding:0 6px}
+.calendar-event-options label{display:flex;align-items:center;gap:8px;font-size:15px}
+.calendar-event-options input{width:18px;height:18px;accent-color:var(--jg-indigo)}
+.modal>.calendar-registration-results{display:block;margin-top:16px;font-size:14px;line-height:1.7}
+.calendar-registration-results p{margin-top:0;font-size:15px}
+.calendar-registration-results ul{padding-left:20px}
+.calendar-rows .calendar-row{grid-template-columns:minmax(0,1fr) minmax(0,1.5fr)}
+.calendar-rows .calendar-row>div{height:auto;min-height:125px;padding:16px}
+.calendar-rows .registered-cert>strong{display:block;padding-right:60px;overflow-wrap:anywhere}
+.calendar-rows .registered-date>.badge{margin-left:0;padding:6px 10px;height:auto;max-width:100%;white-space:normal}
+.calendar-rows .registered-date>.button{position:static;display:flex;margin-top:12px}
+.calendar-rows .calendar-row b{overflow-wrap:anywhere}
+@media(max-width:760px){.calendar-rows .calendar-row{grid-template-columns:minmax(0,1fr)}}
