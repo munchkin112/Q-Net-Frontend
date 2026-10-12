@@ -15,6 +15,8 @@ export default defineConfig({
         mypage: 'mypage.html',
         favorites: 'favorites.html',
         calendar: 'calendar.html',
+        'calendar-callback': 'calendar-callback.html',
+        callback: 'callback.html',
       },
     },
   },

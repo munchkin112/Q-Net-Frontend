@@ -4,3 +4,15 @@
 .favorite-card h2{color:var(--jg-navy)}
 .favorite-card>p,.favorite-footer button,.registered-on{color:var(--jg-text-muted)}
 .favorites-controls label,.favorites-controls select{border-color:var(--jg-border);border-radius:10px}
+.favorite-card{display:flex;flex-direction:column}
+.favorite-card .badge{align-self:flex-start;flex-shrink:0}
+.favorite-card h2,.favorite-card>p{white-space:normal;overflow-wrap:anywhere;word-break:keep-all}
+.favorite-card>p{flex:1}
+.favorite-card>.button{flex-shrink:0}
+.favorites-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.favorites-grid .favorite-card{height:auto;min-height:224px}
+.mypage-favorites .favorite-card{height:auto;min-height:247px}
+.favorite-footer{flex-wrap:wrap;row-gap:6px}
+.favorites-grid .favorite-footer button{min-width:0;flex-shrink:0}
+.favorite-footer .registered-on{min-width:0;font-size:14px}
+@media(max-width:760px){.favorites-grid,.mypage-favorites{grid-template-columns:minmax(0,1fr)}}

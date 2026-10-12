@@ -4,3 +4,13 @@
 .related-card>.badge{background:var(--jg-ice);color:var(--jg-indigo)}
 .related-card h2,.related-card h3{color:var(--jg-navy)}
 .related-card .job-description,.review-note{color:var(--jg-text-muted)}
+.related-grid{grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch}
+.related-card{display:flex;flex-direction:column;min-width:0;height:auto;min-height:480px}
+.related-card .description{max-width:none}
+.related-card h3,.related-card h3.reason,.related-card .job-description{position:static;margin-top:20px}
+.related-card .job-description{margin-top:10px;line-height:1.7}
+.recommendation-reason{margin:10px 0 24px;font-size:15px;line-height:1.7;color:var(--jg-text-muted)}
+.related-card h2,.related-card p{overflow-wrap:anywhere}
+.related-card .button{position:static;width:100%;margin-top:auto;justify-content:center;text-align:center}
+@media(max-width:1000px){.related-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.related-grid{grid-template-columns:minmax(0,1fr)}.related-actions{flex-wrap:wrap;gap:12px}.related-actions .button{width:100%;justify-content:center}}

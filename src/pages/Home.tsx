@@ -96,7 +96,7 @@ export default function Home() {
           </form>
           <Button onClick={() => protectedGo('profile')}>내 조건으로 찾기</Button>
         </div>
-        <small>공식 종목명이나 코드를 검색할 수 있어요. 맞춤 추천은 로그인 후 이용할 수 있습니다.</small>
+        <small>공식 종목명이나 코드를 검색할 수 있어요. 내 조건으로 자격증을 추천받아 보세요.</small>
       </section>
       <section className="catalog">
         <div className="catalog-title">

@@ -1,39 +1,9 @@
 import { useAppContext } from '../AppContext';
 import { Button } from '../components/Button';
 
-const recommendations = [
-  {
-    name: '기계정비산업기사',
-    description: '기계 설비의 유지·보수에 관심이 있다면 살펴볼 수 있는 자격증입니다.',
-  },
-  {
-    name: '컴퓨터응용가공산업기사',
-    description: '기계 가공과 컴퓨터 기반 제작 분야를 탐색할 때 참고할 수 있습니다.',
-  },
-  {
-    name: '생산자동화산업기사',
-    description: '생산설비 자동화 분야에 관심이 있다면 살펴볼 수 있습니다.',
-  },
-  {
-    name: '설비보전기사',
-    description: '설비 관리와 보전 분야를 알아볼 때 참고할 수 있는 자격증입니다.',
-  },
-  {
-    name: '기계가공기능사',
-    description: '기계 가공·조립 분야를 탐색할 때 살펴볼 수 있습니다.',
-  },
-  {
-    name: '전산응용기계제도기능사',
-    description: '기계 도면과 CAD 관련 분야에 관심이 있다면 살펴볼 수 있습니다.',
-  },
-  {
-    name: '컴퓨터응용선반기능사',
-    description: '기계 가공과 선반 작업 분야를 알아볼 때 참고할 수 있습니다.',
-  },
-];
-
 export default function Recommendations() {
-  const { go, openDetail } = useAppContext();
+  const { go, openDetail, recommendationResult } = useAppContext();
+  const recommendations = recommendationResult?.items.slice(0, 10) ?? [];
 
   return (
     <main className="recommendations-main">
@@ -53,23 +23,24 @@ export default function Recommendations() {
       </header>
 
       <aside className="recommendations-summary" aria-label="추천 목록 안내">
-        <span className="recommendations-count">15+ 기계</span>
-        <p>최대 10개까지 표시됩니다. 표시 순서는 점수 순위가 아닙니다.</p>
+        <span className="recommendations-count">{recommendations.length}개 추천</span>
+        <p>응답 순서대로 추천 자격증을 최대 10개 모두 표시합니다.</p>
       </aside>
 
       <section className="recommendations-list" aria-labelledby="recommendations-list-title">
         <div className="recommendations-list-heading">
-          <h2 id="recommendations-list-title">추가로 살펴볼 자격증</h2>
-          <span>{recommendations.length}개 표시 · UI 예시</span>
+          <h2 id="recommendations-list-title">전체 추천 자격증</h2>
+          <span>{recommendations.length}개 표시</span>
         </div>
         <div className="recommendations-items">
-          {recommendations.map(({ name, description }) => (
-            <article className="recommendation-card" key={name}>
+          {!recommendations.length && <p className="empty">추천 자격증이 없습니다. 관심 분야·정보를 입력하고 추천을 조회해주세요.</p>}
+          {recommendations.map(({ certificate_id, name, summary, category_name }) => (
+            <article className="recommendation-card" key={certificate_id}>
               <div className="recommendation-copy">
                 <h3>{name}</h3>
                 <div className="recommendation-description">
-                  <span className="badge">국가기술자격</span>
-                  <p>{description}</p>
+                  <span className="badge">{category_name}</span>
+                  <p>{summary}</p>
                 </div>
               </div>
               <Button className="primary" onClick={() => openDetail(name)}>

@@ -17,3 +17,24 @@ export function useStored<T>(key: string, initial: T) {
 
   return [value, setValue] as const;
 }
+
+export function useSessionStored<T>(key: string, initial: T) {
+  const storageKey = `jagyeok:${key}`;
+  const [value, setValue] = useState<T>(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem(storageKey) || 'null') ?? initial;
+    } catch {
+      return initial;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(storageKey, JSON.stringify(value));
+    } catch {
+      // Keep the current page state when browser storage is unavailable.
+    }
+  }, [storageKey, value]);
+
+  return [value, setValue] as const;
+}

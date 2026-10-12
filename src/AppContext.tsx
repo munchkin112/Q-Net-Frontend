@@ -1,8 +1,10 @@
 import { createContext, useContext } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { CalendarEntry } from './api/calendar';
-import type { Certificate, Page } from './api/certificates';
+import type { Certificate, CertificateSchedule, Page } from './api/certificates';
 import type { Profile } from './api/profile';
+import type { RecommendationsResponse } from './api/recommendations';
+import type { FavoriteCertificate, FavoriteInput } from './api/favorites';
 
 export type AppContextValue = {
   page: Page;
@@ -11,8 +13,8 @@ export type AppContextValue = {
   setLogged: Dispatch<SetStateAction<boolean>>;
   selected: string;
   setSelected: Dispatch<SetStateAction<string>>;
-  favorites: string[];
-  setFavorites: Dispatch<SetStateAction<string[]>>;
+  favorites: FavoriteCertificate[];
+  setFavorites: Dispatch<SetStateAction<FavoriteCertificate[]>>;
   calendar: CalendarEntry[];
   setCalendar: Dispatch<SetStateAction<CalendarEntry[]>>;
   search: string;
@@ -28,12 +30,16 @@ export type AppContextValue = {
   setReturnPage: Dispatch<SetStateAction<Page>>;
   profile: Profile;
   setProfile: Dispatch<SetStateAction<Profile>>;
+  recommendationResult: RecommendationsResponse | null;
+  setRecommendationResult: Dispatch<SetStateAction<RecommendationsResponse | null>>;
   calendarKey: string;
   setCalendarKey: Dispatch<SetStateAction<string>>;
   examType: string;
   setExamType: Dispatch<SetStateAction<string>>;
   round: number;
   setRound: Dispatch<SetStateAction<number>>;
+  activeSchedule: CertificateSchedule | null;
+  setActiveSchedule: Dispatch<SetStateAction<CertificateSchedule | null>>;
   toast: string;
   setToast: Dispatch<SetStateAction<string>>;
   dialog: boolean;
@@ -46,7 +52,7 @@ export type AppContextValue = {
   goHome: () => void;
   protectedGo: (to: Page) => void;
   openDetail: (name: string) => void;
-  toggleFavorite: (name: string) => void;
+  toggleFavorite: (name: string, certificate?: FavoriteInput) => void;
   openCalendar: (name: string, id?: string) => void;
   calendarId: (entry: CalendarEntry) => string;
   cert: Certificate;

@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createRecommendations } from '../api/recommendations';
 import assets from '../assets.json';
 import { certificates } from '../api/certificates';
 import { exams, initialCalendar } from '../api/calendar';
-import { profileFields, educationOptions, educationStatusOptions } from '../api/profile';
+import { getInterestCategories, type InterestCategory, educationOptions, educationStatusOptions } from '../api/profile';
 import { useAppContext } from '../AppContext';
 import { Button } from '../components/Button';
 import { Icon, OutlineIcon } from '../components/Icons';
@@ -14,20 +15,52 @@ export default function Profile() {
     page, logged, setLogged, selected, setSelected, favorites, setFavorites,
     calendar, setCalendar, search, setSearch, submitted, setSubmitted,
     category, setCategory, more, setMore, returnPage, setReturnPage, profile,
-    setProfile, calendarKey, setCalendarKey, examType, setExamType, round,
+    setProfile, setRecommendationResult, calendarKey, setCalendarKey, examType, setExamType, round,
     setRound, toast, setToast, dialog, setDialog, favoriteSearch,
     setFavoriteSearch, sort, setSort, go, protectedGo, openDetail,
     toggleFavorite, openCalendar, calendarId, cert, registered, register,
   } = useAppContext();
-  const fields = profileFields;
+  const [fields, setFields] = useState<InterestCategory[]>([]);
+  const [fieldsLoading, setFieldsLoading] = useState(true);
+  const [fieldsError, setFieldsError] = useState('');
+  const [fieldsRequest, setFieldsRequest] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const requestPending = useRef(false);
+  const [saveError, setSaveError] = useState('');
+  const selectedCode = String(profile.field + 1).padStart(2, '0');
+  const selectedField = fields.find(field => field.code === selectedCode);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setFieldsLoading(true);
+    setFieldsError('');
+    getInterestCategories(controller.signal)
+      .then(data => {
+        if (!controller.signal.aborted) setFields(data);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setFieldsError('관심 분야를 불러오지 못했습니다. 다시 시도해주세요.');
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setFieldsLoading(false);
+      });
+    return () => controller.abort();
+  }, [fieldsRequest]);
 
   return (
     <main className="profile-main">
       <h1>내 조건으로 찾기</h1>
       <p className="muted">별도 추가 질문 화면 없이 필요한 입력을 이 화면에서 펼쳐 보여줍니다.</p>
       <form
-        onSubmit={e => {
+        onSubmit={async e => {
           e.preventDefault();
+          if (requestPending.current) return;
+          if (!selectedField || fieldsLoading || fieldsError) {
+            setToast('관심 분야를 불러온 후 선택해주세요.');
+            return;
+          }
           if (!educationOptions.some(option => option.value === profile.education) ||
               !educationStatusOptions.some(option => option.value === profile.educationStatus)) {
             setToast('최종 학력·졸업 상태를 입력해 주세요.');
@@ -38,24 +71,44 @@ export default function Profile() {
             setToast('관련 직무 년차를 입력해 주세요.');
             return;
           }
-          go('related');
+          requestPending.current = true;
+          setSaving(true);
+          setSaveError('');
+          try {
+            const result = await createRecommendations(profile);
+            setRecommendationResult(result);
+            go('related');
+          } catch (error) {
+            setSaveError(error instanceof Error ? error.message : '추천 자격증을 불러오지 못했습니다.');
+          } finally {
+            requestPending.current = false;
+            setSaving(false);
+          }
         }}
       >
         <label className="field-label">관심 분야 *</label>
         <div className="field-placeholder">
-          {`${String(profile.field + 1).padStart(2, '0')} ${fields[profile.field]}`}
+          {selectedField ? `${selectedField.code} ${selectedField.name}` : '관심 분야를 선택해주세요'}
         </div>
-        <div className="field-grid" role="radiogroup" aria-label="관심 분야">
-          {fields.map((f, i) => (
+        {fieldsError && (
+          <div className="field-feedback" role="alert">
+            <span>{fieldsError}</span>
+            <button type="button" onClick={() => setFieldsRequest(value => value + 1)}>다시 시도</button>
+          </div>
+        )}
+        <div className="field-grid" role="radiogroup" aria-label="관심 분야" aria-busy={fieldsLoading}>
+          {fieldsLoading && <p className="field-status" role="status">관심 분야를 불러오는 중입니다.</p>}
+          {!fieldsLoading && !fieldsError && fields.map(field => (
             <button
-              key={f}
+              key={field.code}
               type="button"
               role="radio"
-              aria-checked={profile.field === i}
-              className={profile.field === i ? 'chosen' : ''}
-              onClick={() => setProfile({ ...profile, field: i })}
+              aria-checked={selectedCode === field.code}
+              className={selectedCode === field.code ? 'chosen' : ''}
+              onClick={() => setProfile({ ...profile, field: Number(field.code) - 1 })}
             >
-              {String(i + 1).padStart(2, '0')} {f}
+              <span className="field-code">{field.code}</span>
+              <span className="field-name">{field.name}</span>
             </button>
           ))}
         </div>
@@ -84,10 +137,10 @@ export default function Profile() {
             <input
               value={profile.major}
               onChange={e => setProfile({ ...profile, major: e.target.value })}
-              placeholder="직접 입력 / 해당 없음 / 잘 모르겠어요"
+              placeholder="직접 입력 (없을 시 빈칸)"
             />
           </label>
-          <fieldset>
+          <fieldset className="profile-career">
             <legend>관련 경력 *</legend>
             <div className="experience">
               {[true, false].map(v => (
@@ -111,7 +164,7 @@ export default function Profile() {
                 type="number"
                 min="0"
                 max="80"
-                step="0.1"
+                step="1"
                 required={profile.experience}
                 placeholder="ex) 3"
                 disabled={!profile.experience}
@@ -122,8 +175,9 @@ export default function Profile() {
             </div>
           </label>
         </div>
-        <Button type="submit" className="primary profile-submit">
-          저장하고 관련 자격증 보기
+        {saveError && <p className="field-feedback" role="alert">{saveError}</p>}
+        <Button type="submit" className="primary profile-submit" disabled={saving || fieldsLoading} aria-busy={saving}>
+          {saving ? '추천 자격증을 불러오는 중…' : '저장하고 관련 자격증 보기'}
         </Button>
       </form>
     </main>
