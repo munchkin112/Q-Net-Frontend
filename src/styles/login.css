@@ -114,6 +114,13 @@
   line-height:1.6;
   text-align:center;
 }
+.login-panel>.login-error{
+  top:367px;
+  color:#b42318;
+  font-size:12px;
+}
+.login-panel.has-error>.text-button{top:395px}
+.login-panel.has-error>small{top:447px}
 @media(max-width:760px){
   .login-main{min-height:calc(100vh - 80px);padding:32px 20px}
 }
@@ -133,6 +140,7 @@
     width:100%;
     max-width:100%;
   }
+  .login-panel>.login-error{color:#b42318}
   .login-panel>h1{font-size:27px}
   .login-panel>p{font-size:13px}
   .login-hint{min-height:72px}

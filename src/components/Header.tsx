@@ -2,7 +2,7 @@ import { Button } from './Button';
 import { useAppContext } from '../AppContext';
 
 export function Header() {
-  const { page, logged, go, protectedGo, setReturnPage } = useAppContext();
+  const { page, logged, go, goHome, protectedGo, setReturnPage } = useAppContext();
   const showAccountButton = !['profile', 'related'].includes(page);
 
   const openAccount = () => {
@@ -16,7 +16,7 @@ export function Header() {
 
   return (
     <header className="header">
-      <button className="brand" onClick={() => go('home')}>
+      <button className="brand" onClick={goHome}>
         <span className="brand-mark">자</span>
         <strong>자격잇다</strong>
       </button>

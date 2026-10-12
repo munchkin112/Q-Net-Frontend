@@ -16,6 +16,120 @@ export type Certificate = {
   level: string;
 };
 
+export type OfficialCertificate = {
+  id: string;
+  qnet_code: string;
+  name: string;
+  category: string;
+  career_tags: string[];
+  description: string | null;
+  source_url: string;
+  last_synced_at: string;
+  updated_at: string;
+};
+
+type CertificateSearchOptions = {
+  query: string;
+  category?: 'T' | 'S';
+  limit: number;
+  offset: number;
+  signal?: AbortSignal;
+};
+
+export async function searchOfficialCertificates({
+  query,
+  category,
+  limit,
+  offset,
+  signal,
+}: CertificateSearchOptions): Promise<OfficialCertificate[]> {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+  if (!baseUrl) {
+    throw new Error('VITE_API_BASE_URL 환경변수를 설정해주세요.');
+  }
+
+  const params = new URLSearchParams({
+    q: query,
+    limit: String(limit),
+    offset: String(offset),
+  });
+  if (category) params.set('category', category);
+
+  let response: Response;
+  try {
+    response = await fetch(
+      `${baseUrl.replace(/\/+$/, '')}/certificates?${params.toString()}`,
+      {
+        headers: { Accept: 'application/json' },
+        signal,
+      },
+    );
+  } catch (error) {
+    throw new Error('공식 자격증 목록을 불러오지 못했습니다. 백엔드 연결을 확인해주세요.', {
+      cause: error,
+    });
+  }
+
+  if (!response.ok) {
+    let message = `공식 자격증 목록 조회에 실패했습니다. (${response.status})`;
+    try {
+      const body: unknown = await response.json();
+      if (
+        body &&
+        typeof body === 'object' &&
+        'detail' in body &&
+        typeof body.detail === 'string'
+      ) {
+        message = body.detail;
+      } else if (
+        body &&
+        typeof body === 'object' &&
+        'error' in body &&
+        body.error &&
+        typeof body.error === 'object' &&
+        'message' in body.error &&
+        typeof body.error.message === 'string'
+      ) {
+        message = body.error.message;
+      }
+    } catch {
+      // Keep the status-based message when the server does not return JSON.
+    }
+    throw new Error(message);
+  }
+
+  const result: unknown = await response.json();
+  if (
+    !Array.isArray(result) ||
+    !result.every(
+      (item): item is OfficialCertificate =>
+        item !== null &&
+        typeof item === 'object' &&
+        'id' in item &&
+        typeof item.id === 'string' &&
+        'qnet_code' in item &&
+        typeof item.qnet_code === 'string' &&
+        'name' in item &&
+        typeof item.name === 'string' &&
+        'category' in item &&
+        typeof item.category === 'string' &&
+        'career_tags' in item &&
+        Array.isArray(item.career_tags) &&
+        'description' in item &&
+        (typeof item.description === 'string' || item.description === null) &&
+        'source_url' in item &&
+        typeof item.source_url === 'string' &&
+        'last_synced_at' in item &&
+        typeof item.last_synced_at === 'string' &&
+        'updated_at' in item &&
+        typeof item.updated_at === 'string',
+    )
+  ) {
+    throw new Error('백엔드가 올바르지 않은 자격증 목록을 반환했습니다.');
+  }
+  return result;
+}
+
 export const certificates: Certificate[] = [
   {
     name: '프레스금형기사',
