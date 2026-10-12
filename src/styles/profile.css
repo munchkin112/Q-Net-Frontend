@@ -5,3 +5,4 @@
 .field-grid button{color:var(--jg-navy)}
 .field-grid .chosen,.experience button.chosen{color:var(--jg-indigo);background:var(--jg-ice);border-color:var(--jg-indigo)}
 .experience button{background:#fff}
+.profile-grid select{display:block;width:100%;height:48px;padding:0 16px;margin-top:12px;border:1px solid var(--border);border-radius:12px;background:white;font-size:16px;font-weight:400;color:#16343d}
