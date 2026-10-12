@@ -120,7 +120,7 @@ export default function Home() {
         </div>
         <div className="catalog-grid" aria-busy={loading}>
           {items.map((item) => (
-            <button className="catalog-card" key={item.id} onClick={() => openDetail(item.name)}>
+            <button className="catalog-card" key={item.id} onClick={() => openDetail(item.name, item.id)}>
               <img src={assets.main.imgVector11} className="card-bg" alt="" />
               <span className="badge">
                 {item.category === 'T' ? '국가기술자격' : '국가전문자격'}

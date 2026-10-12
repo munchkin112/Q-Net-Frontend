@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { CalendarEntry } from './api/calendar';
 import type { Certificate, Page } from './api/certificates';
 import type { Profile } from './api/profile';
+import type { RecommendationResponse } from './api/recommendations';
 
 export type AppContextValue = {
   page: Page;
@@ -11,6 +12,8 @@ export type AppContextValue = {
   setLogged: Dispatch<SetStateAction<boolean>>;
   selected: string;
   setSelected: Dispatch<SetStateAction<string>>;
+  selectedCertificateId: string;
+  setSelectedCertificateId: Dispatch<SetStateAction<string>>;
   favorites: string[];
   setFavorites: Dispatch<SetStateAction<string[]>>;
   calendar: CalendarEntry[];
@@ -28,6 +31,8 @@ export type AppContextValue = {
   setReturnPage: Dispatch<SetStateAction<Page>>;
   profile: Profile;
   setProfile: Dispatch<SetStateAction<Profile>>;
+  recommendation: RecommendationResponse | null;
+  setRecommendation: Dispatch<SetStateAction<RecommendationResponse | null>>;
   calendarKey: string;
   setCalendarKey: Dispatch<SetStateAction<string>>;
   examType: string;
@@ -45,7 +50,7 @@ export type AppContextValue = {
   go: (to: Page) => void;
   goHome: () => void;
   protectedGo: (to: Page) => void;
-  openDetail: (name: string) => void;
+  openDetail: (name: string, certificateId?: string) => void;
   toggleFavorite: (name: string) => void;
   openCalendar: (name: string, id?: string) => void;
   calendarId: (entry: CalendarEntry) => string;

@@ -1,39 +1,11 @@
+import { profileFields } from '../api/profile';
 import { useAppContext } from '../AppContext';
 import { Button } from '../components/Button';
 
-const recommendations = [
-  {
-    name: '기계정비산업기사',
-    description: '기계 설비의 유지·보수에 관심이 있다면 살펴볼 수 있는 자격증입니다.',
-  },
-  {
-    name: '컴퓨터응용가공산업기사',
-    description: '기계 가공과 컴퓨터 기반 제작 분야를 탐색할 때 참고할 수 있습니다.',
-  },
-  {
-    name: '생산자동화산업기사',
-    description: '생산설비 자동화 분야에 관심이 있다면 살펴볼 수 있습니다.',
-  },
-  {
-    name: '설비보전기사',
-    description: '설비 관리와 보전 분야를 알아볼 때 참고할 수 있는 자격증입니다.',
-  },
-  {
-    name: '기계가공기능사',
-    description: '기계 가공·조립 분야를 탐색할 때 살펴볼 수 있습니다.',
-  },
-  {
-    name: '전산응용기계제도기능사',
-    description: '기계 도면과 CAD 관련 분야에 관심이 있다면 살펴볼 수 있습니다.',
-  },
-  {
-    name: '컴퓨터응용선반기능사',
-    description: '기계 가공과 선반 작업 분야를 알아볼 때 참고할 수 있습니다.',
-  },
-];
-
 export default function Recommendations() {
-  const { go, openDetail } = useAppContext();
+  const { recommendation, profile, go, openDetail } = useAppContext();
+  const firstCount = recommendation?.initial_display_count ?? 0;
+  const additional = recommendation?.items.slice(firstCount) ?? [];
 
   return (
     <main className="recommendations-main">
@@ -49,40 +21,56 @@ export default function Recommendations() {
 
       <header className="recommendations-heading">
         <h1>추천 자격증 더 보기</h1>
-        <p>같은 추천 결과에서 자격증을 더 살펴보세요.</p>
+        <p>앞 화면과 같은 추천 결과에서 추가 후보를 살펴보세요.</p>
       </header>
 
-      <aside className="recommendations-summary" aria-label="추천 목록 안내">
-        <span className="recommendations-count">15+ 기계</span>
-        <p>최대 10개까지 표시됩니다. 표시 순서는 점수 순위가 아닙니다.</p>
-      </aside>
+      {recommendation && (
+        <aside className="recommendations-summary" aria-label="추천 목록 안내">
+          <span className="recommendations-count">
+            {String(profile.field + 1).padStart(2, '0')} {profileFields[profile.field]}
+          </span>
+          <p>전체 {recommendation.total_count}개 중 추가 {additional.length}개를 표시합니다. 순서는 응시 가능 여부의 순위가 아닙니다.</p>
+        </aside>
+      )}
 
       <section className="recommendations-list" aria-labelledby="recommendations-list-title">
         <div className="recommendations-list-heading">
           <h2 id="recommendations-list-title">추가로 살펴볼 자격증</h2>
-          <span>{recommendations.length}개 표시 · UI 예시</span>
+          <span>{additional.length}개 표시</span>
         </div>
-        <div className="recommendations-items">
-          {recommendations.map(({ name, description }) => (
-            <article className="recommendation-card" key={name}>
-              <div className="recommendation-copy">
-                <h3>{name}</h3>
-                <div className="recommendation-description">
-                  <span className="badge">국가기술자격</span>
-                  <p>{description}</p>
+        {additional.length === 0 ? (
+          <div className="recommendations-empty">
+            <p>{recommendation ? '이 추천 결과에는 추가 후보가 없습니다.' : '먼저 내 조건으로 추천을 생성해 주세요.'}</p>
+            <Button className="primary" onClick={() => go(recommendation ? 'related' : 'profile')}>
+              {recommendation ? '앞의 추천 보기' : '내 조건 입력하기'}
+            </Button>
+          </div>
+        ) : (
+          <div className="recommendations-items">
+            {additional.map((card) => (
+              <article className="recommendation-card" key={card.certificate_id}>
+                <div className="recommendation-copy">
+                  <h3>{card.name}</h3>
+                  <div className="recommendation-description">
+                    <span className="badge">{card.category_name}</span>
+                    <p>{card.reason || card.summary}</p>
+                  </div>
                 </div>
-              </div>
-              <Button className="primary" onClick={() => openDetail(name)}>
-                상세정보 보기
-              </Button>
-            </article>
-          ))}
-        </div>
+                <Button
+                  className="primary"
+                  onClick={() => openDetail(card.name, card.certificate_id)}
+                >
+                  상세정보 보기
+                </Button>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
 
       <aside className="recommendations-notice">
         <strong>추천은 응시 가능 여부의 확정 판정이 아닙니다.</strong>
-        <p>추가 후보가 개별 자격 요건을 만족한다는 뜻은 아닙니다. 후보가 없으면 안내 영역은 숨깁니다.</p>
+        <p>상세 자격 요건과 시험 일정은 공식 안내에서 다시 확인해 주세요.</p>
       </aside>
     </main>
   );

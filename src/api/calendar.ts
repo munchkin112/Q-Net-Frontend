@@ -16,6 +16,10 @@ export type CalendarEntry = {
   apply: string;
   exam: string;
   round: number;
+  roundLabel?: string;
+  registrationId?: string;
+  status?: 'completed' | 'partial';
+  googleLinks?: string[];
 };
 
 export const exams: Exam[] = [
@@ -69,7 +73,7 @@ export const initialCalendar: CalendarEntry[] = certificates
   }));
 
 export function calendarId(entry: CalendarEntry): string {
-  return `${entry.name}:${entry.type}:${entry.round}`;
+  return entry.registrationId || `${entry.name}:${entry.type}:${entry.round}`;
 }
 
 export function downloadCalendar(name: string, type: string, round: number): void {

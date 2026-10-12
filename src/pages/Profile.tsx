@@ -1,24 +1,17 @@
-import React from 'react';
-import assets from '../assets.json';
-import { certificates } from '../api/certificates';
-import { exams, initialCalendar } from '../api/calendar';
-import { profileFields, educationOptions, educationStatusOptions } from '../api/profile';
+import { useState } from 'react';
+import {
+  profileFields, educationOptions, educationStatusOptions, getProfilePayload,
+} from '../api/profile';
+import {
+  createRecommendations, getSavedProfile, RecommendationApiError, updateSavedProfile,
+} from '../api/recommendations';
 import { useAppContext } from '../AppContext';
 import { Button } from '../components/Button';
-import { Icon, OutlineIcon } from '../components/Icons';
-import { FavoriteCard } from '../components/FavoriteCard';
-import { CalendarRows, SmallTitle } from '../components/PageHelpers';
 
 export default function Profile() {
-  const {
-    page, logged, setLogged, selected, setSelected, favorites, setFavorites,
-    calendar, setCalendar, search, setSearch, submitted, setSubmitted,
-    category, setCategory, more, setMore, returnPage, setReturnPage, profile,
-    setProfile, calendarKey, setCalendarKey, examType, setExamType, round,
-    setRound, toast, setToast, dialog, setDialog, favoriteSearch,
-    setFavoriteSearch, sort, setSort, go, protectedGo, openDetail,
-    toggleFavorite, openCalendar, calendarId, cert, registered, register,
-  } = useAppContext();
+  const { profile, setProfile, setRecommendation, go } = useAppContext();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
   const fields = profileFields;
 
   return (
@@ -26,19 +19,31 @@ export default function Profile() {
       <h1>내 조건으로 찾기</h1>
       <p className="muted">별도 추가 질문 화면 없이 필요한 입력을 이 화면에서 펼쳐 보여줍니다.</p>
       <form
-        onSubmit={e => {
+        onSubmit={async e => {
           e.preventDefault();
-          if (!educationOptions.some(option => option.value === profile.education) ||
-              !educationStatusOptions.some(option => option.value === profile.educationStatus)) {
-            setToast('최종 학력·졸업 상태를 입력해 주세요.');
-            return;
+          if (busy) return;
+          setError('');
+          try {
+            getProfilePayload(profile);
+            setBusy(true);
+            setRecommendation(null);
+            const current = await getSavedProfile();
+            const saved = await updateSavedProfile(profile, current.profile_version);
+            if (!saved.profile_completed) {
+              throw new Error('프로필에 필요한 정보를 모두 입력해 주세요.');
+            }
+            const results = await createRecommendations();
+            setRecommendation(results);
+            go('related');
+          } catch (cause) {
+            if (cause instanceof RecommendationApiError && cause.status === 409) {
+              setError('다른 화면에서 프로필이 변경됐습니다. 입력 내용을 확인하고 다시 시도해 주세요.');
+            } else {
+              setError(cause instanceof Error ? cause.message : '추천 결과를 불러오지 못했습니다.');
+            }
+          } finally {
+            setBusy(false);
           }
-          if (profile.experience && (!profile.years || !Number.isFinite(Number(profile.years)) ||
-              Number(profile.years) < 0 || Number(profile.years) > 80)) {
-            setToast('관련 직무 년차를 입력해 주세요.');
-            return;
-          }
-          go('related');
         }}
       >
         <label className="field-label">관심 분야 *</label>
@@ -122,9 +127,10 @@ export default function Profile() {
             </div>
           </label>
         </div>
-        <Button type="submit" className="primary profile-submit">
-          저장하고 관련 자격증 보기
+        <Button type="submit" className="primary profile-submit" disabled={busy}>
+          {busy ? '프로필 저장·추천 생성 중…' : '저장하고 관련 자격증 보기'}
         </Button>
+        {error && <p role="alert" className="profile-error">{error}</p>}
       </form>
     </main>
   );

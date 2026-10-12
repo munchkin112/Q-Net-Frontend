@@ -12,12 +12,12 @@ import {
   calendarId,
   downloadCalendar,
   exams,
-  initialCalendar,
 } from './api/calendar';
 import type { CalendarEntry } from './api/calendar';
 import { certificates, type Page } from './api/certificates';
 import { toggleFavorite as updateFavorites } from './api/favorites';
 import { initialProfile } from './api/profile';
+import type { RecommendationResponse } from './api/recommendations';
 import { useStored } from './api/storage';
 import Calendar from './pages/Calendar';
 import Detail from './pages/Detail';
@@ -39,6 +39,7 @@ import './styles/detail.css';
 import './styles/mypage.css';
 import './styles/favorites.css';
 import './styles/calendar.css';
+import './styles/recommendation-integration.css';
 
 const pages: Page[] = [
   'home',
@@ -65,8 +66,10 @@ export default function App() {
   const [page, setPage] = useState<Page>(route);
   const [logged, setLogged] = useState(() => Boolean(getAccessToken()));
   const [selected, setSelected] = useStored('selected', certificates[0].name);
+  const [selectedCertificateId, setSelectedCertificateId] = useStored('selected-certificate-id', '');
   const [favorites, setFavorites] = useStored('favorites', certificates.map(({ name }) => name));
-  const [calendar, setCalendar] = useStored('calendar', initialCalendar);
+  // 이전 데모 기록은 실제 Google 등록 이력으로 표시하지 않는다.
+  const [calendar, setCalendar] = useStored<CalendarEntry[]>('calendar-registrations-v1', []);
   const [search, setSearch] = useStored('search', '');
   const [submitted, setSubmitted] = useState(search);
   const [category, setCategory] = useState('전체');
@@ -74,6 +77,7 @@ export default function App() {
   const [homeResetKey, setHomeResetKey] = useState(0);
   const [returnPage, setReturnPage] = useStored<Page>('return-page', 'detail');
   const [profile, setProfile] = useStored('profile', initialProfile);
+  const [recommendation, setRecommendation] = useState<RecommendationResponse | null>(null);
   const [calendarKey, setCalendarKey] = useState('');
   const [examType, setExamType] = useState('필기');
   const [round, setRound] = useState(2);
@@ -180,12 +184,14 @@ export default function App() {
       go('login');
     }
   };
-  const openDetail = (name: string) => {
+  const openDetail = (name: string, certificateId = '') => {
     setSelected(name);
+    setSelectedCertificateId(certificateId);
     protectedGo('detail');
   };
   const openCalendar = (name: string, id = '') => {
     setSelected(name);
+    setSelectedCertificateId('');
     setCalendarKey(id);
     go('calendar');
   };
@@ -223,6 +229,8 @@ export default function App() {
         setLogged,
         selected,
         setSelected,
+        selectedCertificateId,
+        setSelectedCertificateId,
         favorites,
         setFavorites,
         calendar,
@@ -240,6 +248,8 @@ export default function App() {
         setReturnPage,
         profile,
         setProfile,
+        recommendation,
+        setRecommendation,
         calendarKey,
         setCalendarKey,
         examType,
