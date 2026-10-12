@@ -23,6 +23,7 @@ export type AppContextValue = {
   setCategory: Dispatch<SetStateAction<string>>;
   more: boolean;
   setMore: Dispatch<SetStateAction<boolean>>;
+  homeResetKey: number;
   returnPage: Page;
   setReturnPage: Dispatch<SetStateAction<Page>>;
   profile: Profile;
@@ -42,6 +43,7 @@ export type AppContextValue = {
   sort: string;
   setSort: Dispatch<SetStateAction<string>>;
   go: (to: Page) => void;
+  goHome: () => void;
   protectedGo: (to: Page) => void;
   openDetail: (name: string) => void;
   toggleFavorite: (name: string) => void;

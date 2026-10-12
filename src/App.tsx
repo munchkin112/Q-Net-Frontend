@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
 import { AppContextProvider } from './AppContext';
 import {
+  AuthApiError,
+  clearAccessToken,
+  completeGoogleLogin,
+  getAccessToken,
+  refreshAccessToken,
+  saveAccessToken,
+} from './api/auth';
+import {
   calendarId,
   downloadCalendar,
   exams,
@@ -55,7 +63,7 @@ function route(): Page {
 
 export default function App() {
   const [page, setPage] = useState<Page>(route);
-  const [logged, setLogged] = useStored('demo-session', false);
+  const [logged, setLogged] = useState(() => Boolean(getAccessToken()));
   const [selected, setSelected] = useStored('selected', certificates[0].name);
   const [favorites, setFavorites] = useStored('favorites', certificates.map(({ name }) => name));
   const [calendar, setCalendar] = useStored('calendar', initialCalendar);
@@ -63,6 +71,7 @@ export default function App() {
   const [submitted, setSubmitted] = useState(search);
   const [category, setCategory] = useState('전체');
   const [more, setMore] = useState(false);
+  const [homeResetKey, setHomeResetKey] = useState(0);
   const [returnPage, setReturnPage] = useStored<Page>('return-page', 'detail');
   const [profile, setProfile] = useStored('profile', initialProfile);
   const [calendarKey, setCalendarKey] = useState('');
@@ -87,6 +96,61 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const query = new URLSearchParams(location.search);
+    const code = query.get('code');
+    const state = query.get('state');
+    const oauthError = query.get('error');
+    let cancelled = false;
+
+    if (code || state || oauthError) {
+      history.replaceState({}, '', `${location.pathname}${location.hash}`);
+      if (oauthError || !code || !state) {
+        setToast('Google 로그인에 실패했습니다. 다시 시도해주세요.');
+        if (page !== 'login') go('login');
+        return;
+      }
+
+      void completeGoogleLogin(code, state)
+        .then(({ access_token: accessToken }) => {
+          if (cancelled) return;
+          saveAccessToken(accessToken);
+          setLogged(true);
+          setToast('Google 로그인에 성공했습니다.');
+          go(returnPage);
+        })
+        .catch((cause: unknown) => {
+          if (cancelled) return;
+          clearAccessToken();
+          setLogged(false);
+          setToast(cause instanceof Error ? cause.message : 'Google 로그인에 실패했습니다.');
+          if (page !== 'login') go('login');
+        });
+    } else {
+      void refreshAccessToken()
+        .then((accessToken) => {
+          if (cancelled) return;
+          saveAccessToken(accessToken);
+          setLogged(true);
+        })
+        .catch((cause: unknown) => {
+          if (cancelled) return;
+          if (cause instanceof AuthApiError && cause.status === 401) {
+            clearAccessToken();
+            setLogged(false);
+            return;
+          }
+          setToast(
+            cause instanceof Error ? cause.message : '로그인 상태를 확인하지 못했습니다.',
+          );
+        });
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!toast) return;
     const timeout = setTimeout(() => setToast(''), 3000);
     return () => clearTimeout(timeout);
@@ -100,6 +164,14 @@ export default function App() {
       setPage(to);
       window.scrollTo(0, 0);
     }
+  };
+  const goHome = () => {
+    setSearch('');
+    setSubmitted('');
+    setCategory('전체');
+    setMore(false);
+    setHomeResetKey((key) => key + 1);
+    go('home');
   };
   const protectedGo = (to: Page) => {
     if (logged) go(to);
@@ -163,6 +235,7 @@ export default function App() {
         setCategory,
         more,
         setMore,
+        homeResetKey,
         returnPage,
         setReturnPage,
         profile,
@@ -182,6 +255,7 @@ export default function App() {
         sort,
         setSort,
         go,
+        goHome,
         protectedGo,
         openDetail,
         toggleFavorite,
