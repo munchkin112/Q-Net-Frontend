@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import type { CertificateSchedule } from '../api/certificates';
 import { downloadCalendar, formatRoundLabel } from '../api/calendar';
 import {
-  CalendarApiError, calendarEventOptions, getCalendarAuthorizationUrl, registerGoogleCalendar,
+  CalendarApiError, calendarEventOptions, getCalendarAuthorizationUrl, registerGoogleCalendar, needsCalendarReconnection,
   type CalendarEventType, type CalendarRegistrationResult,
 } from '../api/googleCalendar';
 
@@ -62,6 +62,10 @@ export default function CalendarRegistrationDialog({ name, schedule, onClose, on
       const response = await registerGoogleCalendar(schedule, types, rememberAttempt());
       setResult(response);
       onSaved(response);
+      if (needsCalendarReconnection(response)) {
+        sessionStorage.removeItem(CALENDAR_CONNECTED_UNTIL);
+        setConnected(false);
+      }
     } catch (cause) {
       if (cause instanceof CalendarApiError && (cause.status === 401 || cause.status === 403)) {
         sessionStorage.removeItem(CALENDAR_CONNECTED_UNTIL); setConnected(false);

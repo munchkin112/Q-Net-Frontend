@@ -95,6 +95,13 @@ export const calendarStatusLabel = (status?: CalendarRegistrationResult['status'
   status === 'completed' ? '✓ Google Calendar 등록 완료' : status === 'partial' ? 'Google Calendar 일부 등록' :
   status === 'pending_confirmation' ? 'Google Calendar 등록 확인 필요' : 'Google Calendar 등록 실패';
 
+export function needsCalendarReconnection(result: CalendarRegistrationResult): boolean {
+  return result.items.some(item => item.status === 'failed' && [
+    'GOOGLE_CALENDAR_PERMISSION_DENIED', 'GOOGLE_CALENDAR_PERMISSION_REQUIRED',
+    'GOOGLE_CALENDAR_REAUTH_REQUIRED',
+  ].includes(item.code || ''));
+}
+
 export function googleCalendarLink(value: string | null | undefined): string | undefined {
   if (!value) return undefined;
   try {
